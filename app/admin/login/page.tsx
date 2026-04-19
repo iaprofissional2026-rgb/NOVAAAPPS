@@ -30,19 +30,24 @@ export default function AdminLogin() {
     setError('');
 
     try {
+      if (!crypto || !crypto.subtle) {
+        throw new Error('Ambiente de segurança não suportado (exige HTTPS).');
+      }
       const hashed = await hashPassword(password);
-      if (username === ADMIN_USERNAME && hashed === ADMIN_HASH) {
+      const normalizedUsername = username.toUpperCase().trim();
+
+      if (normalizedUsername === ADMIN_USERNAME && hashed === ADMIN_HASH) {
         recordAttempt(true);
         // Set a secure session flag
         sessionStorage.setItem('admin_session', 'true');
         router.push('/admin/dashboard');
       } else {
         recordAttempt(false);
-        setError('Acesso Negado. Credenciais inválidas.');
+        setError('Acesso Negado. Verifique o usuário e a senha mestra.');
         setPassword('');
       }
-    } catch (err) {
-      setError('Erro no servidor de autenticação.');
+    } catch (err: any) {
+      setError(err.message || 'Erro crítico na autenticação.');
     } finally {
       setLoading(false);
     }
