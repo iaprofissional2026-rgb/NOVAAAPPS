@@ -11,8 +11,10 @@ export async function hashPassword(password: string): Promise<string> {
   return hashHex;
 }
 
-// Current Admin Hash for "NOV+-AAPPS566.+()"
-export const ADMIN_HASH = "78d38076602c388efba662d5a3637e7dd92cf856b3e7ed27cf28254823869947";
+// Current Admin Credentials
+export const ADMIN_USERNAME = "NOVAAAPSADMIN";
+// Hash for "admin1312mk._$"
+export const ADMIN_HASH = "9ec903d6f76c5354992565650117a5867b66df21e7d96924c6194451010372df";
 
 const LOCKOUT_KEY = 'admin_lockout_until';
 const ATTEMPTS_KEY = 'admin_attempts';

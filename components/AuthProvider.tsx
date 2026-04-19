@@ -3,8 +3,9 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { 
   User as FirebaseUser, 
-  GoogleAuthProvider, 
-  signInWithPopup, 
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
   signOut,
   onAuthStateChanged
 } from 'firebase/auth';
@@ -15,12 +16,17 @@ import {
   onSnapshot,
   updateDoc,
   increment,
+  query,
+  collection,
+  where,
+  getDocs,
   serverTimestamp
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
 interface UserProfile {
   uid: string;
+  username: string;
   email: string;
   displayName: string;
   xp: number;
@@ -33,12 +39,16 @@ interface AuthContextType {
   user: FirebaseUser | null;
   profile: UserProfile | null;
   loading: boolean;
-  signInWithGoogle: () => Promise<void>;
+  login: (username: string, pass: string) => Promise<void>;
+  register: (username: string, pass: string, displayName: string) => Promise<void>;
   logout: () => Promise<void>;
   incrementXP: (amount: number) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+
+// Helper to sanitize and format username as dummy email
+const formatEmail = (username: string) => `${username.toLowerCase().trim()}@app.evomind`;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -59,20 +69,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               ...data,
               plan: data.plan || 'free'
             } as UserProfile);
+            setLoading(false);
           } else {
-            // Create initial profile if it doesn't exist yet
-            setDoc(userRef, {
-              uid: currentUser.uid,
-              email: currentUser.email || '',
-              displayName: currentUser.displayName || 'Novato',
-              xp: 0,
-              level: 1,
-              plan: 'free',
-              createdAt: serverTimestamp()
-            });
+            // Profile will be created by register()
+            setLoading(false);
           }
+        }, (error) => {
+          console.error("Firestore Profile Error:", error);
+          setLoading(false);
         });
-        setLoading(false);
+        
         return () => unsubProfile();
       } else {
         setProfile(null);
@@ -81,16 +87,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [router]);
 
-  const signInWithGoogle = async () => {
+  const login = async (username: string, pass: string) => {
+    setLoading(true);
     try {
-      const provider = new GoogleAuthProvider();
-      // Using signInWithPopup because redirect might have domain allowlist issues in iframe
-      await signInWithPopup(auth, provider);
-    } catch (error) {
+      const email = formatEmail(username);
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch (error: any) {
       console.error("Login Error:", error);
-      throw error;
+      let msg = "Erro ao entrar. Verifique usuário e senha.";
+      if (error.code === 'auth/user-not-found') msg = "Usuário não encontrado.";
+      if (error.code === 'auth/wrong-password') msg = "Senha incorreta.";
+      throw new Error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (username: string, pass: string, displayName: string) => {
+    setLoading(true);
+    try {
+      // 1. Check if username is already taken in our DB
+      const q = query(collection(db, 'users'), where('username', '==', username.toLowerCase().trim()));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        throw new Error("Este nome de usuário já está em uso.");
+      }
+
+      const email = formatEmail(username);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+      const newUser = userCredential.user;
+
+      await updateProfile(newUser, { displayName });
+
+      // 2. Create the profile document
+      const userRef = doc(db, 'users', newUser.uid);
+      await setDoc(userRef, {
+        uid: newUser.uid,
+        username: username.toLowerCase().trim(),
+        email: email,
+        displayName: displayName,
+        xp: 0,
+        level: 1,
+        plan: 'free',
+        createdAt: serverTimestamp()
+      });
+
+    } catch (error: any) {
+      console.error("Registration Error:", error);
+      let msg = error.message || "Erro ao criar conta.";
+      if (error.code === 'auth/email-already-in-use') msg = "Usuário já existe.";
+      if (error.code === 'auth/weak-password') msg = "Senha muito fraca.";
+      throw new Error(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -122,7 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, logout, incrementXP }}>
+    <AuthContext.Provider value={{ user, profile, loading, login, register, logout, incrementXP }}>
       {children}
     </AuthContext.Provider>
   );

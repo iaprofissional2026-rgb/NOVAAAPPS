@@ -2,12 +2,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { ShieldAlert, KeyRound, Clock, ChevronLeft } from 'lucide-react';
-import { hashPassword, ADMIN_HASH, recordAttempt, checkLockout } from '@/lib/admin-security';
+import { ShieldAlert, KeyRound, User, Clock, ChevronLeft } from 'lucide-react';
+import { hashPassword, ADMIN_HASH, ADMIN_USERNAME, recordAttempt, checkLockout } from '@/lib/admin-security';
 import { PremiumButton } from '@/components/ui/PremiumButton';
 
 export default function AdminLogin() {
   const router = useRouter();
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [lockout, setLockout] = useState({ locked: false, remaining: 0 });
@@ -30,14 +31,14 @@ export default function AdminLogin() {
 
     try {
       const hashed = await hashPassword(password);
-      if (hashed === ADMIN_HASH) {
+      if (username === ADMIN_USERNAME && hashed === ADMIN_HASH) {
         recordAttempt(true);
         // Set a secure session flag
         sessionStorage.setItem('admin_session', 'true');
         router.push('/admin/dashboard');
       } else {
         recordAttempt(false);
-        setError('Acesso Negado. Credencial inválida.');
+        setError('Acesso Negado. Credenciais inválidas.');
         setPassword('');
       }
     } catch (err) {
@@ -65,16 +66,31 @@ export default function AdminLogin() {
           <p className="text-white/40 text-[11px] font-bold uppercase tracking-widest mt-2">Área do Desenvolvedor</p>
         </div>
 
-        <form onSubmit={handleLogin} className="glass-card p-8 rounded-[2.5rem] border border-white/5 shadow-2xl">
-          <div className="mb-6">
-            <label className="text-white/60 text-[10px] uppercase font-black tracking-widest mb-3 block">Chave de Criptografia</label>
+        <form onSubmit={handleLogin} className="glass-card p-8 rounded-[2.5rem] border border-white/5 shadow-2xl space-y-6">
+          <div>
+            <label className="text-white/60 text-[10px] uppercase font-black tracking-widest mb-3 block">Identificação</label>
+            <div className="relative">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={18} />
+              <input 
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoFocus
+                disabled={lockout.locked || loading}
+                placeholder="USUÁRIO"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-white/10 focus:outline-none focus:border-blue-500/50 transition-all font-bold tracking-tight uppercase"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-white/60 text-[10px] uppercase font-black tracking-widest mb-3 block">Senha Mestra</label>
             <div className="relative">
               <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={18} />
               <input 
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                autoFocus
                 disabled={lockout.locked || loading}
                 placeholder="••••••••••••••"
                 className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-white/10 focus:outline-none focus:border-blue-500/50 transition-all font-mono"
@@ -85,7 +101,7 @@ export default function AdminLogin() {
 
           <PremiumButton 
             onClick={() => {}} // Form handled by onSubmit
-            disabled={lockout.locked || loading || !password}
+            disabled={lockout.locked || loading || !password || !username}
             className="bg-white text-black font-black uppercase tracking-tight py-4"
           >
             {loading ? 'Validando...' : 'Autenticar'}

@@ -4,11 +4,13 @@ import { BrainCircuit, Star, Target, Zap, User } from 'lucide-react';
 import { PremiumButton } from '@/components/ui/PremiumButton';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
+import { useApp } from '@/components/AppProvider';
 import { useEffect } from 'react';
 
 export default function DashboardHome() {
   const router = useRouter();
   const { user, profile, loading } = useAuth();
+  const { config } = useApp();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -22,7 +24,7 @@ export default function DashboardHome() {
     <div className="px-6 py-10">
       <header className="flex justify-between items-center mb-8">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <p className="text-white/60 font-medium text-sm tracking-wide">Bom dia,</p>
+          <p className="text-white/60 font-medium text-sm tracking-wide">Bem dia,</p>
           <h1 className="text-2xl font-bold text-white tracking-tight">{profile?.displayName || 'Usuário'}</h1>
         </motion.div>
         <motion.div 
@@ -30,15 +32,23 @@ export default function DashboardHome() {
           animate={{ opacity: 1, scale: 1 }}
           className="w-12 h-12 rounded-full p-[1px] glass-card shadow-[0_0_15px_rgba(255,255,255,0.1)] relative overflow-hidden"
         >
-          {user.photoURL ? (
-            <img src={user.photoURL} alt="Profile" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-              <User size={20} className="text-white" />
-            </div>
-          )}
+          <div className="w-full h-full bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+            <User size={20} className="text-white" />
+          </div>
         </motion.div>
       </header>
+
+      {/* Daily Phrase */}
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8 p-6 glass-card rounded-[2rem] border-l-4 border-primary"
+      >
+        <p className="text-white/40 text-[10px] uppercase font-black tracking-widest mb-2">Foco do Dia</p>
+        <p className="text-white/90 text-sm italic font-medium leading-relaxed">
+          "{config?.dailyPhrase || 'A jornada de mil milhas começa com um único passo.'}"
+        </p>
+      </motion.div>
 
       {/* Hero Card */}
       <motion.div 

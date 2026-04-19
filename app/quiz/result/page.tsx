@@ -8,18 +8,13 @@ import { useAuth } from '@/components/AuthProvider';
 
 export default function QuizResult() {
   const router = useRouter();
-  const { user, signInWithGoogle } = useAuth();
+  const { user } = useAuth();
 
   const handleAction = async () => {
     if (user) {
       router.push('/dashboard');
     } else {
-      try {
-        await signInWithGoogle();
-        router.push('/dashboard');
-      } catch (err) {
-        console.error(err);
-      }
+      router.push('/register');
     }
   };
 
@@ -123,7 +118,7 @@ export default function QuizResult() {
       >
          <PremiumButton onClick={handleAction} className="bg-white text-black font-black flex items-center justify-center gap-2">
            {!user && <LogIn size={20} />}
-           {user ? 'Acessar Dashboard' : 'Criar Conta com Google'}
+           {user ? 'Acessar Dashboard' : 'Criar Conta'}
          </PremiumButton>
       </motion.div>
     </ScreenWrapper>

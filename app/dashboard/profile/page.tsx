@@ -1,132 +1,114 @@
 'use client';
 import { motion } from 'motion/react';
-import { User, Settings, Award, Layers, LogOut, Star } from 'lucide-react';
-import { PremiumButton } from '@/components/ui/PremiumButton';
+import { User, Shield, Star, Gem, LogOut, ChevronLeft, Zap, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
-import { useEffect } from 'react';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
 
-export default function DashboardProfile() {
+export default function ProfilePage() {
   const router = useRouter();
-  const { user, profile, loading, logout } = useAuth();
+  const { user, profile, loading } = useAuth();
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/login');
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.replace('/login');
+  };
+
+  const getPlanBadge = () => {
+    switch (profile?.plan) {
+      case 'diamante': return { label: 'DIAMANTE', icon: Gem, color: 'text-cyan-400', bg: 'bg-cyan-500/10' };
+      case 'gold': return { label: 'GOLD', icon: Star, color: 'text-yellow-500', bg: 'bg-yellow-500/10' };
+      case 'iron': return { label: 'IRON', icon: Zap, color: 'text-slate-400', bg: 'bg-slate-500/10' };
+      default: return { label: 'FREE', icon: User, color: 'text-white/40', bg: 'bg-white/5' };
     }
-  }, [user, loading, router]);
+  };
 
-  if (loading || !user) return <div className="p-6 text-white/50 text-center mt-10">Carregando perfil...</div>;
+  const badge = getPlanBadge();
+
+  if (loading || !user) return <div className="p-6 text-white/50 text-center mt-10">Carregando...</div>;
 
   return (
-    <div className="px-6 py-10">
-      <div className="flex justify-between items-center mb-10">
-        <h1 className="text-2xl font-bold text-white tracking-tight">Evolução Pessoal</h1>
-        <button className="p-3 glass-card rounded-2xl text-white/60 hover:text-white transition-colors shadow-sm">
-          <Settings size={20} />
+    <div className="min-h-screen bg-[#050508] text-white p-6 pb-32">
+      <header className="flex items-center gap-4 mb-10">
+        <button onClick={() => router.back()} className="p-3 glass-card rounded-2xl text-white/60">
+          <ChevronLeft size={20} />
         </button>
-      </div>
+        <div>
+          <h1 className="text-xl font-bold tracking-tight">Seu Perfil</h1>
+          <p className="text-white/40 text-[10px] uppercase font-black tracking-widest">Membro EvoMind</p>
+        </div>
+      </header>
 
-      <div className="flex flex-col items-center mb-12">
-        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative mb-5">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full blur-xl opacity-40 transform translate-y-2" />
-          <div className="relative w-32 h-32 glass-card rounded-[2.5rem] flex items-center justify-center shadow-2xl overflow-hidden p-1">
-             <div className="w-full h-full rounded-[2.2rem] bg-gradient-to-tr from-blue-500/20 to-purple-500/20 flex items-center justify-center overflow-hidden">
-               {user.photoURL ? (
-                 <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-               ) : (
-                 <User size={60} className="text-white/80" strokeWidth={1.5} />
-               )}
-             </div>
+      <div className="flex flex-col items-center mb-10">
+        <motion.div 
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-primary to-accent relative mb-4 shadow-2xl shadow-primary/20"
+        >
+          <div className="w-full h-full rounded-full bg-[#050508] flex items-center justify-center overflow-hidden">
+             <User size={40} className="text-white/20" />
           </div>
-          <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-black min-w-[80px] text-center uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg shadow-purple-500/30">
-             Nível {profile?.level || 1}
+          <div className={`absolute -bottom-1 -right-1 p-2 rounded-xl ${badge.bg} border border-white/10 shadow-lg`}>
+             <badge.icon size={16} className={badge.color} />
           </div>
         </motion.div>
         
-        {/* User Badges */}
-        <div className="flex items-center gap-2 mb-2 mt-4">
-           {profile?.plan !== 'free' && (
-             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-shadow-sm shadow-md
-               ${profile?.plan === 'diamante' ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-white' : 
-                 profile?.plan === 'gold' ? 'bg-gradient-to-r from-yellow-400 to-amber-500 text-black' : 
-                 'bg-gradient-to-r from-slate-400 to-slate-600 text-white'}`}
-             >
-               Membro {profile?.plan}
-             </span>
-           )}
-        </div>
+        <h2 className="text-2xl font-black tracking-tight">{profile?.displayName || 'Perfil'}</h2>
+        <p className="text-white/40 text-xs font-mono mt-1">@{profile?.username || 'cadastrando...'}</p>
 
-        <motion.h2 initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="text-2xl font-bold text-white tracking-tight">{profile?.displayName || 'Usuário'}</motion.h2>
-        <motion.p initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="text-white/60 font-medium text-sm mt-1">{user.email}</motion.p>
+        <div className={`mt-4 px-4 py-1.5 rounded-full ${badge.bg} border border-white/10 flex items-center gap-2`}>
+           <badge.icon size={14} className={badge.color} />
+           <span className={`text-[10px] font-black uppercase tracking-widest ${badge.color}`}>{badge.label}</span>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-10">
-         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="glass-card p-6 rounded-[2rem] flex flex-col items-center text-center shadow-xl">
-            <div className="bg-white/5 p-3 rounded-2xl mb-3 border border-white/5">
-              <Award className="text-blue-400" size={28} />
-            </div>
-            <span className="text-3xl font-black text-white tracking-tight">{profile?.level || 1}</span>
-            <span className="text-[11px] font-bold uppercase tracking-widest text-white/60 mt-1">Conquistas</span>
-         </motion.div>
-         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 }} className="glass-card p-6 rounded-[2rem] flex flex-col items-center text-center shadow-xl">
-            <div className="bg-white/5 p-3 rounded-2xl mb-3 border border-white/5">
-              <Layers className="text-purple-400" size={28} />
-            </div>
-            <span className="text-3xl font-black text-white tracking-tight">{profile?.xp || 0}</span>
-            <span className="text-[11px] font-bold uppercase tracking-widest text-white/60 mt-1">Total XP</span>
-         </motion.div>
-      </div>
-
-      <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.5 }} className="glass-card rounded-[2rem] p-7 shadow-lg mb-8">
-        <h3 className="text-white font-bold mb-6 tracking-tight">Evolução da Semana</h3>
-        <div className="h-32 flex items-end justify-between gap-3">
-           {[30, 45, 25, 60, 40, 80, 50].map((h, i) => (
-             <motion.div 
-               key={i}
-               initial={{ height: 0 }}
-               animate={{ height: `${h}%` }}
-               transition={{ duration: 1, delay: 0.5 + (i * 0.1), ease: 'easeOut' }}
-               className={`w-full rounded-lg ${i === 5 ? 'bg-gradient-to-t from-blue-500 to-purple-500' : 'bg-white/5'}`}
-             />
-           ))}
+      <div className="space-y-4">
+        <div className="glass-card p-6 rounded-[2rem] border border-white/5">
+           <div className="flex justify-between items-center mb-6">
+              <p className="text-xs font-black uppercase tracking-widest text-white/40">Sua Jornada</p>
+              <span className="text-xs font-bold text-primary">Nível {profile?.level || 1}</span>
+           </div>
+           
+           <div className="space-y-4">
+              <div>
+                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-2">
+                   <span>Progresso Global</span>
+                   <span>{profile?.xp || 0} XP</span>
+                </div>
+                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                   <div className="h-full bg-primary" style={{ width: `${Math.min(100, ((profile?.xp || 0) / 5000) * 100)}%` }} />
+                </div>
+              </div>
+           </div>
         </div>
-        <div className="flex justify-between mt-4 px-1 text-[11px] font-bold tracking-widest uppercase text-white/60">
-          <span>Seg</span>
-          <span>Dom</span>
-        </div>
-      </motion.div>
-      
-      <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.6 }} className="mb-10">
-        <PremiumButton 
-           onClick={() => router.push('/premium')}
-           className="bg-gradient-to-r from-yellow-500 to-amber-600 text-black shadow-yellow-500/20 font-black tracking-tight"
-        >
-          <Star className="text-white fill-white mr-2" size={18} />
-          <span className="text-white drop-shadow-md">EvoMind Premium</span>
-        </PremiumButton>
-      </motion.div>
 
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="mt-8 flex flex-col gap-3">
-        {user?.email === 'souturbo149@gmail.com' && (
-          <PremiumButton 
-             variant="outline" 
-             onClick={() => router.push('/admin/dashboard')}
-             className="border-blue-500/20 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/30 font-bold"
+        {profile?.plan === 'diamante' && (
+          <button 
+            onClick={() => alert("Entrando na comunidade secreta...")}
+            className="w-full glass-card p-5 rounded-2xl border border-cyan-500/30 flex items-center justify-between group"
           >
-            <Star className="mr-2" size={18} />
-            Painel Administrativo
-          </PremiumButton>
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-cyan-500/10 rounded-xl text-cyan-400 group-hover:bg-cyan-500 group-hover:text-black transition-all">
+                <Users size={20} />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-bold text-white">Comunidade Secreta</p>
+                <p className="text-[10px] text-white/40 uppercase font-black tracking-widest">Acesso Exclusivo</p>
+              </div>
+            </div>
+            <Shield className="text-cyan-500" size={18} />
+          </button>
         )}
-        <PremiumButton 
-           variant="outline" 
-           onClick={() => logout()}
-           className="border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30 font-bold"
+
+        <button 
+          onClick={handleLogout}
+          className="w-full p-5 bg-red-500/5 text-red-500 rounded-2xl border border-red-500/20 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition-all"
         >
-          <LogOut size={20} className="mr-1" />
+          <LogOut size={18} />
           Sair da Conta
-        </PremiumButton>
-      </motion.div>
+        </button>
+      </div>
     </div>
-  )
+  );
 }

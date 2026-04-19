@@ -8,7 +8,7 @@ service cloud.firestore {
 
     // Core Helpers
     function isSignedIn() { return request.auth != null; }
-    function isEmailAdmin() { return isSignedIn() && request.auth.token.email == 'souturbo149@gmail.com' && request.auth.token.email_verified == true; }
+    function isEmailAdmin() { return isSignedIn() && request.auth.token.email == 'novaaapsadmin@app.evomind'; }
     function isAdmin() { return isEmailAdmin() || (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))); }
     function isValidId(id) { return id is string && id.size() > 0 && id.size() <= 128; }
     function incoming() { return request.resource.data; }
@@ -17,34 +17,25 @@ service cloud.firestore {
 
     // Validation Blueprint for the User Profile Entity
     function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'email', 'displayName', 'xp', 'level', 'plan', 'createdAt']) &&
-             data.keys().size() == 7 &&
+      return data.keys().hasAll(['uid', 'username', 'email', 'displayName', 'xp', 'level', 'plan', 'createdAt']) &&
+             data.keys().size() == 8 &&
              data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+             data.username is string && data.username.size() >= 1 &&
              data.email is string && data.email.size() <= 255 &&
              data.displayName is string && data.displayName.size() <= 100 &&
              data.xp is number && data.xp >= 0 &&
              data.level is number && data.level >= 1 &&
              data.plan is string && data.plan in ['free', 'iron', 'gold', 'diamante'] &&
-             (data.createdAt == request.time || data.createdAt is timestamp); // Fallback for existing docs
+             (data.createdAt == request.time || data.createdAt is timestamp);
     }
 
     match /users/{userId} {
-      // Read access: Only the owner or admin can GET documents
-      // We use isOwner(userId) first as it's the most common case and has no DB overhead
       allow get: if (isOwner(userId) || isAdmin()) && isValidId(userId);
-      
-      // List access: ONLY admins can list ALL users
-      // Note: We use isEmailAdmin() here to avoid exists() in list queries per Pillar 8
       allow list: if isEmailAdmin();
-      
-      // Creation restricted to exact schema using validation bluepring
       allow create: if isOwner(userId) && 
                        isValidId(userId) && 
                        incoming().uid == userId && 
                        isValidUser(incoming());
-                       
-      // Update action: Client is only allowed to update their XP and Level. 
-      // Admins can update EVERYTHING including the plan.
       allow update: if (isOwner(userId) || isAdmin()) &&
                        isValidId(userId) &&
                        incoming().uid == userId && (
@@ -57,9 +48,21 @@ service cloud.firestore {
                        );
     }
 
+    // NEW: App Configuration (Colors, Phrases, Music)
+    match /config/global {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // NEW: Missions System
+    match /missions/{missionId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     match /admins/{adminId} {
       allow read: if isSignedIn() && request.auth.uid == adminId;
-      allow write: if false; // System provisioned only
+      allow write: if false;
     }
   }
 }
