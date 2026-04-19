@@ -8,7 +8,7 @@ import { getAuth } from 'firebase-admin/auth';
 // But we also inject projectId to ensure it explicitly targets our project
 
 const firebaseAdminConfig = {
-  projectId: "gen-lang-client-0217972204",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "gen-lang-client-0217972204",
 };
 
 // Initialize Admin App
@@ -17,6 +17,7 @@ export const adminApp =
     ? getApps()[0] 
     : initializeApp(firebaseAdminConfig);
 
-// Specify the literal databaseId in Admin SDK
-export const adminDb = getFirestore(adminApp, "ai-studio-cc8ba4f4-1644-443c-ab38-9f9364bd9a9e");
+// Specify the databaseId
+const databaseId = process.env.NEXT_PUBLIC_FIREBASE_FIRESTORE_DATABASE_ID || "ai-studio-cc8ba4f4-1644-443c-ab38-9f9364bd9a9e";
+export const adminDb = getFirestore(adminApp, databaseId);
 export const adminAuth = getAuth(adminApp);

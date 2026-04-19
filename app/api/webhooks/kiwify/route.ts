@@ -55,16 +55,25 @@ async function upgradeUserPlan(uid: string, productName: string) {
   const productStr = productName.toLowerCase();
   
   let newPlan = 'gold'; // default assumption
-  if (productStr.includes('iron')) newPlan = 'iron';
+  if (productStr.includes('iron') || productStr.includes('ferro')) newPlan = 'iron';
   if (productStr.includes('diamante') || productStr.includes('diamond')) newPlan = 'diamante';
+  if (productStr.includes('gold') || productStr.includes('ouro')) newPlan = 'gold';
 
   try {
     const userRef = adminDb.collection('users').doc(uid);
+    const userSnap = await userRef.get();
+    
+    if (!userSnap.exists) {
+      console.error(`User Snapshot for UID [${uid}] NOT found in database.`);
+      throw new Error("User not found in DB during upgrade");
+    }
+
     await userRef.update({
       plan: newPlan,
-      xp: FieldValue.increment(500) // Bonus XP for upgrading
+      xp: FieldValue.increment(1000), // Increased bonus XP for purchase
+      updatedAt: FieldValue.serverTimestamp()
     });
-    console.log(`Success! Upgraded UID [${uid}] to Plan [${newPlan}]`);
+    console.log(`🚀 SUCCESS! User [${uid}] upgraded to [${newPlan.toUpperCase()}]`);
   } catch (err) {
     console.error(`Failed to upgrade UID [${uid}]:`, err);
     throw err;
