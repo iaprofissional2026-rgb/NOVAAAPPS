@@ -18,10 +18,13 @@ import {
   Plus,
   Trash2,
   Save,
-  Rocket
+  Rocket,
+  AlertCircle,
+  Unplug
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, getDocs, orderBy, limit, doc, updateDoc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { PremiumButton } from '@/components/ui/PremiumButton';
@@ -58,6 +61,17 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [firebaseUser, setFirebaseUser] = useState<any>(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  // Auth Listener
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setFirebaseUser(user);
+      setAuthReady(true);
+    });
+    return () => unsub();
+  }, []);
 
   // Real-time clock
   useEffect(() => {
@@ -263,6 +277,38 @@ export default function AdminDashboard() {
                 </button>
               ))}
             </div>
+            <div className="h-4 w-[1px] bg-white/10 mx-2" />
+            
+            {/* Firebase Auth Status */}
+            <div className="flex items-center gap-2 group relative">
+               {authReady ? (
+                 firebaseUser ? (
+                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-green-500/10 border border-green-500/20">
+                     <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                     <span className="text-[9px] font-black uppercase tracking-widest text-green-400">Firebase On</span>
+                   </div>
+                 ) : (
+                   <button 
+                     onClick={() => router.push('/login')}
+                     className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all"
+                   >
+                     <Unplug size={12} className="text-red-400" />
+                     <span className="text-[9px] font-black uppercase tracking-widest text-red-400">Firebase Off</span>
+                   </button>
+                 )
+               ) : (
+                 <div className="w-20 h-6 bg-white/5 animate-pulse rounded-xl" />
+               )}
+               
+               {/* Tooltip */}
+               {!firebaseUser && authReady && (
+                 <div className="absolute top-10 left-0 w-48 p-3 glass-card rounded-xl border border-red-500/20 text-[10px] text-red-300 font-medium z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                    <AlertCircle size={14} className="mb-1" />
+                    As permissões de escrita (salvar) exigem que você esteja logado no App com sua conta administrativa.
+                 </div>
+               )}
+            </div>
+
             <div className="h-4 w-[1px] bg-white/10 mx-2" />
             <div className="flex flex-col items-end">
               <p className="text-[12px] font-mono font-bold text-white/80 tabular-nums">

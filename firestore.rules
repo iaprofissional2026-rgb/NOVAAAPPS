@@ -10,9 +10,10 @@ service cloud.firestore {
     function isSignedIn() { return request.auth != null; }
     function isAdmin() { 
       return isSignedIn() && (
-        request.auth.token.email == 'souturbo149@gmail.com' ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username in ['novaaapsadmin', 'novaappsadmin2', 'souturbo149', 'NOVAAAPSADMIN', 'NOVAAPPSADMIN2', 'SOUTURBO149'])
+        request.auth.token.email.lower() == 'souturbo149@gmail.com' ||
+        request.auth.token.email.lower() == 'souturbo149@app.evomind' ||
+        request.auth.token.email.lower().startsWith('novaaapsadmin') ||
+        request.auth.token.email.lower().startsWith('novaappsadmin')
       );
     }
     function isValidId(id) { return id is string && id.size() > 0 && id.size() <= 128; }
