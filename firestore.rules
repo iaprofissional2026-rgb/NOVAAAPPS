@@ -50,7 +50,7 @@ service cloud.firestore {
 
     // NEW: App Configuration (Colors, Phrases, Music)
     match /config/global {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
