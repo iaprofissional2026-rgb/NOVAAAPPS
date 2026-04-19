@@ -21,7 +21,7 @@ export default function Splash() {
   useEffect(() => {
     const t = setTimeout(() => {
       if (clicks < 5) router.replace('/onboarding');
-    }, 2500);
+    }, 5000); // Increased to 5 seconds to allow easier 5-click access
     return () => clearTimeout(t);
   }, [router, clicks]);
 

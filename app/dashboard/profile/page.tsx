@@ -107,7 +107,17 @@ export default function DashboardProfile() {
         </PremiumButton>
       </motion.div>
 
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="mt-8">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="mt-8 flex flex-col gap-3">
+        {user?.email === 'souturbo149@gmail.com' && (
+          <PremiumButton 
+             variant="outline" 
+             onClick={() => router.push('/admin/dashboard')}
+             className="border-blue-500/20 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/30 font-bold"
+          >
+            <Star className="mr-2" size={18} />
+            Painel Administrativo
+          </PremiumButton>
+        )}
         <PremiumButton 
            variant="outline" 
            onClick={() => logout()}
