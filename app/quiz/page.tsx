@@ -73,14 +73,6 @@ export default function QuizDiagnostic() {
           <span className="text-white/50 font-medium text-[10px] tracking-widest uppercase">
             Diagnóstico {currentIndex + 1}/{questions.length}
           </span>
-          {currentIndex === 0 && (
-            <button 
-              onClick={() => router.push('/login')}
-              className="mt-1 text-blue-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-1 hover:text-white transition-colors"
-            >
-              Já tenho uma conta
-            </button>
-          )}
         </div>
         <div className="w-10" />
       </div>

@@ -95,17 +95,8 @@ export default function Onboarding() {
 
       <div className="w-full z-10 mb-2">
         <PremiumButton onClick={nextSlide}>
-          {isLast ? 'Começar Jornada' : 'Continuar'}
+          {isLast ? 'Começar Diagnóstico' : 'Continuar'}
         </PremiumButton>
-      </div>
-
-      <div className="w-full z-10 flex justify-center pb-2">
-        <button 
-          onClick={() => router.push('/login')}
-          className="text-white/40 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors"
-        >
-          Já tenho uma conta
-        </button>
       </div>
     </div>
   );

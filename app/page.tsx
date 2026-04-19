@@ -5,10 +5,13 @@ import { motion } from 'motion/react';
 import { EvoMindLogo } from '@/components/EvoMindLogo';
 import { useState } from 'react';
 
+import { useAuth } from '@/components/AuthProvider';
+
 export default function Splash() {
   const router = useRouter();
+  const { user, loading } = useAuth();
   const [clicks, setClicks] = useState(0);
-  
+
   const handleLogoClick = () => {
     const newCount = clicks + 1;
     if (newCount >= 5) {
@@ -17,13 +20,21 @@ export default function Splash() {
     }
     setClicks(newCount);
   };
-  
+
   useEffect(() => {
+    if (loading) return;
+
     const t = setTimeout(() => {
-      if (clicks < 5) router.replace('/onboarding');
-    }, 5000); // Increased to 5 seconds to allow easier 5-click access
+      if (clicks < 5) {
+        if (user) {
+          router.replace('/dashboard');
+        } else {
+          router.replace('/onboarding');
+        }
+      }
+    }, 4000);
     return () => clearTimeout(t);
-  }, [router, clicks]);
+  }, [router, clicks, user, loading]);
 
   return (
     <div className="h-[100dvh] flex flex-col items-center justify-center bg-transparent relative overflow-hidden">
@@ -69,6 +80,18 @@ export default function Splash() {
           Evolução Mental
         </motion.p>
       </motion.div>
+
+      {!loading && !user && (
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 2 }}
+          onClick={() => router.push('/login')}
+          className="absolute bottom-10 z-20 text-white/20 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors"
+        >
+          Já sou membro (Entrar)
+        </motion.button>
+      )}
     </div>
-  )
+  );
 }
