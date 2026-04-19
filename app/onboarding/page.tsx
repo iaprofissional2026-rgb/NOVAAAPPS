@@ -3,7 +3,7 @@ import { useState } from 'react';
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
-import { BrainCircuit, Compass, Zap } from 'lucide-react';
+import { BrainCircuit, Compass, Zap, ChevronLeft } from 'lucide-react';
 import { PremiumButton } from '@/components/ui/PremiumButton';
 
 const slides = [
@@ -42,10 +42,26 @@ export default function Onboarding() {
     }
   };
 
+  const prevSlide = () => {
+    if (current > 0) {
+      setCurrent(current - 1);
+    } else {
+      router.push('/welcome');
+    }
+  };
+
   const isLast = current === slides.length - 1;
 
   return (
     <div className="h-[100dvh] flex flex-col bg-transparent px-6 py-12 relative overflow-hidden">
+      {/* Back Button */}
+      <button 
+        onClick={prevSlide}
+        className="absolute top-12 left-6 z-20 w-10 h-10 glass-card rounded-full flex items-center justify-center text-white/50 hover:text-white transition-colors"
+      >
+        <ChevronLeft size={20} />
+      </button>
+
       {/* Background glow based on current slide */}
       <div className={`absolute top-0 right-0 w-96 h-96 bg-gradient-to-br ${slides[current]?.color || 'from-blue-500 to-purple-500'} rounded-full blur-[120px] opacity-10 transition-all duration-700 ease-in-out transform translate-x-1/3 -translate-y-1/3`} />
       

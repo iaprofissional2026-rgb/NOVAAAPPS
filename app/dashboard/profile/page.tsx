@@ -1,14 +1,16 @@
 'use client';
 import { motion } from 'motion/react';
-import { User, Shield, Star, Gem, LogOut, ChevronLeft, Zap, Users } from 'lucide-react';
+import { User, Shield, Star, Gem, LogOut, ChevronLeft, Zap, Users, Volume2, VolumeX } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
+import { useApp } from '@/components/AppProvider';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 
 export default function ProfilePage() {
   const router = useRouter();
   const { user, profile, loading } = useAuth();
+  const { isMusicEnabled, toggleMusic } = useApp();
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -81,6 +83,31 @@ export default function ProfilePage() {
                 </div>
               </div>
            </div>
+
+           <div className="h-[1px] w-full bg-white/5 my-6" />
+
+           <p className="text-xs font-black uppercase tracking-widest text-white/40 mb-6">Configurações</p>
+           <button 
+             onClick={toggleMusic}
+             className="w-full flex items-center justify-between group"
+           >
+              <div className="flex items-center gap-4">
+                 <div className={`p-3 rounded-xl transition-all ${isMusicEnabled ? 'bg-blue-500/10 text-blue-400' : 'bg-white/5 text-white/40'}`}>
+                    {isMusicEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+                 </div>
+                 <div className="text-left">
+                    <p className="text-sm font-bold text-white">Música de Fundo</p>
+                    <p className="text-[10px] text-white/40 uppercase font-black tracking-widest">{isMusicEnabled ? 'Ativada' : 'Desativada'}</p>
+                 </div>
+              </div>
+              <div className={`w-10 h-6 rounded-full relative transition-all ${isMusicEnabled ? 'bg-blue-500' : 'bg-white/10'}`}>
+                 <motion.div 
+                   animate={{ x: isMusicEnabled ? 18 : 2 }}
+                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                   className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-lg"
+                 />
+              </div>
+           </button>
         </div>
 
         {profile?.plan === 'diamante' && (

@@ -14,7 +14,7 @@ export default function Splash() {
 
   const handleLogoClick = () => {
     const newCount = clicks + 1;
-    if (newCount >= 5) {
+    if (newCount >= 7) {
       router.push('/admin/login');
       return;
     }
@@ -25,16 +25,21 @@ export default function Splash() {
     if (loading) return;
 
     const t = setTimeout(() => {
-      if (clicks < 5) {
+      if (clicks < 7) {
         if (user) {
           router.replace('/dashboard');
         } else {
-          router.replace('/onboarding');
+          router.replace('/welcome');
         }
       }
-    }, 4000);
+    }, 8000); // Increased to 8 seconds to give more time for 7 clicks
     return () => clearTimeout(t);
   }, [router, clicks, user, loading]);
+
+  const variants = {
+    tap: { scale: 0.85, transition: { duration: 0.1 } },
+    hover: { scale: 1.05 }
+  };
 
   return (
     <div className="h-[100dvh] flex flex-col items-center justify-center bg-transparent relative overflow-hidden">
@@ -51,7 +56,12 @@ export default function Splash() {
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="z-10 flex flex-col items-center"
       >
-        <div className="relative mb-6 cursor-pointer active:scale-95 transition-transform" onClick={handleLogoClick}>
+        <motion.div 
+          variants={variants}
+          whileTap="tap"
+          className="relative mb-6 cursor-pointer active:scale-95 transition-transform" 
+          onClick={handleLogoClick}
+        >
           <motion.div 
              animate={{ rotate: 360 }}
              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
@@ -60,7 +70,13 @@ export default function Splash() {
           <div className="relative flex items-center justify-center">
             <EvoMindLogo className="w-40 h-32" />
           </div>
-        </div>
+          {/* Visual feedback for clicks */}
+          {clicks > 0 && (
+            <div className="absolute -top-4 -right-4 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-black text-white/40 border border-white/10 backdrop-blur-sm">
+              {clicks}
+            </div>
+          )}
+        </motion.div>
         
         <motion.h1
           initial={{ opacity: 0, y: 15 }}

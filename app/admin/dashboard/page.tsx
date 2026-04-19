@@ -20,13 +20,30 @@ import {
   Save,
   Rocket
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, getDocs, orderBy, limit, doc, updateDoc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { PremiumButton } from '@/components/ui/PremiumButton';
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  Legend
+} from 'recharts';
+import { format, subDays, startOfDay, isWithinInterval } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
-type TabType = 'dashboard' | 'config' | 'missions';
+type TabType = 'dashboard' | 'config' | 'missions' | 'stats';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -40,6 +57,61 @@ export default function AdminDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Real-time clock
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Compute Chart Data
+  const chartData = useMemo(() => {
+    if (!users.length) return [];
+    
+    // Growth over last 7 days
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = subDays(new Date(), i);
+      return {
+        date: format(date, 'dd/MM'),
+        dateObj: startOfDay(date),
+        count: 0
+      };
+    }).reverse();
+
+    users.forEach(user => {
+      if (user.createdAt) {
+        const createdDate = user.createdAt.toDate ? user.createdAt.toDate() : new Date(user.createdAt);
+        const dayMatch = last7Days.find(d => 
+          format(d.dateObj, 'dd/MM') === format(createdDate, 'dd/MM')
+        );
+        if (dayMatch) dayMatch.count++;
+      }
+    });
+
+    return last7Days;
+  }, [users]);
+
+  const planData = useMemo(() => {
+    const counts: Record<string, number> = {
+      'free': 0,
+      'iron': 0,
+      'gold': 0,
+      'diamante': 0
+    };
+    users.forEach(u => {
+      const p = u.plan || 'free';
+      counts[p] = (counts[p] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  }, [users]);
+
+  const PLAN_COLORS = {
+    free: '#94A3B8',
+    iron: '#64748B',
+    gold: '#EAB308',
+    diamante: '#06B6D4'
+  };
 
   // App Config States
   const [appConfig, setAppConfig] = useState({
@@ -88,7 +160,10 @@ export default function AdminDashboard() {
       return;
     }
 
-    fetchData();
+    const init = async () => {
+      await fetchData();
+    };
+    init();
 
     // Listen to Config
     const unsubConfig = onSnapshot(doc(db, 'config', 'global'), (snap) => {
@@ -108,10 +183,14 @@ export default function AdminDashboard() {
 
   const handleUpdateConfig = async () => {
     try {
+      setLoading(true);
       await setDoc(doc(db, 'config', 'global'), appConfig);
-      alert("Configurações atualizadas!");
+      alert("Configurações globais salvas com sucesso!");
     } catch (err) {
-      alert("Erro ao atualizar config.");
+      console.error(err);
+      alert("Erro ao salvar configurações. Verifique sua permissão.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -168,20 +247,31 @@ export default function AdminDashboard() {
             <ShieldCheck size={28} />
             EvoMind Admin
           </h1>
-          <div className="flex gap-2 mt-2">
-            {(['dashboard', 'config', 'missions'] as TabType[]).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all border ${
-                  activeTab === tab 
-                  ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/20' 
-                  : 'bg-white/5 text-white/40 border-white/5 hover:bg-white/10'
-                }`}
-              >
-                {tab === 'dashboard' ? 'Geral' : tab === 'config' ? 'Config' : 'Missões'}
-              </button>
-            ))}
+          <div className="flex items-center gap-4 mt-2">
+            <div className="flex gap-2">
+              {(['dashboard', 'stats', 'config', 'missions'] as TabType[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all border ${
+                    activeTab === tab 
+                    ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/20' 
+                    : 'bg-white/5 text-white/40 border-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  {tab === 'dashboard' ? 'Geral' : tab === 'stats' ? 'Dados' : tab === 'config' ? 'Config' : 'Missões'}
+                </button>
+              ))}
+            </div>
+            <div className="h-4 w-[1px] bg-white/10 mx-2" />
+            <div className="flex flex-col items-end">
+              <p className="text-[12px] font-mono font-bold text-white/80 tabular-nums">
+                {format(currentTime, 'HH:mm:ss')}
+              </p>
+              <p className="text-[8px] font-black uppercase tracking-widest text-white/30">
+                {format(currentTime, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+              </p>
+            </div>
           </div>
         </div>
         <button 
@@ -308,6 +398,140 @@ export default function AdminDashboard() {
         </>
       )}
 
+      {activeTab === 'stats' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Growth Chart */}
+            <div className="glass-card p-8 rounded-[2.5rem] border border-white/5 h-[400px]">
+              <h3 className="text-xs font-black uppercase tracking-widest mb-8 flex items-center gap-3">
+                <div className="p-2 bg-blue-500/20 rounded-xl"><TrendingUp size={18} className="text-blue-400" /></div>
+                Crescimento de Usuários (7 dias)
+              </h3>
+              <div className="h-[280px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#ffffff20" 
+                      fontSize={10} 
+                      tickLine={false} 
+                      axisLine={false}
+                    />
+                    <YAxis 
+                      stroke="#ffffff20" 
+                      fontSize={10} 
+                      tickLine={false} 
+                      axisLine={false}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#151619', 
+                        border: '1px solid rgba(255,255,255,0.1)', 
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                      }}
+                      itemStyle={{ color: '#3B82F6' }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="count" 
+                      stroke="#3B82F6" 
+                      strokeWidth={3}
+                      fillOpacity={1} 
+                      fill="url(#colorCount)" 
+                      name="Novos Usuários"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Plan Distribution */}
+            <div className="glass-card p-8 rounded-[2.5rem] border border-white/5 h-[400px]">
+              <h3 className="text-xs font-black uppercase tracking-widest mb-8 flex items-center gap-3">
+                <div className="p-2 bg-yellow-500/20 rounded-xl"><CreditCard size={18} className="text-yellow-400" /></div>
+                Distribuição de Planos
+              </h3>
+              <div className="h-[280px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={planData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {planData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={PLAN_COLORS[entry.name as keyof typeof PLAN_COLORS]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#151619', 
+                        border: '1px solid rgba(255,255,255,0.1)', 
+                        borderRadius: '12px'
+                      }}
+                    />
+                    <Legend 
+                      verticalAlign="bottom" 
+                      height={36} 
+                      iconType="circle"
+                      formatter={(value) => <span className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">{value}</span>}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+          
+          {/* XP Ranking */}
+          <div className="glass-card p-8 rounded-[2.5rem] border border-white/5 min-h-[400px]">
+            <h3 className="text-xs font-black uppercase tracking-widest mb-8 flex items-center gap-3">
+              <div className="p-2 bg-purple-500/20 rounded-xl"><Zap size={18} className="text-purple-400" /></div>
+              Maiores Pontuadores (Top XP)
+            </h3>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={users.sort((a,b) => (b.xp || 0) - (a.xp || 0)).slice(0, 8)}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                  <XAxis 
+                    dataKey="username" 
+                    stroke="#ffffff20" 
+                    fontSize={10} 
+                    tickLine={false} 
+                    axisLine={false}
+                  />
+                  <YAxis 
+                    stroke="#ffffff20" 
+                    fontSize={10} 
+                    tickLine={false} 
+                    axisLine={false}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#151619', 
+                      border: '1px solid rgba(255,255,255,0.1)', 
+                      borderRadius: '12px'
+                    }}
+                  />
+                  <Bar dataKey="xp" fill="#8B5CF6" radius={[6, 6, 0, 0]} name="XP Total" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </motion.div>
+      )}
       {activeTab === 'config' && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="glass-card p-8 rounded-[2.5rem] border border-white/5">
@@ -393,9 +617,17 @@ export default function AdminDashboard() {
           </div>
 
           <div className="md:col-span-2">
-            <PremiumButton onClick={handleUpdateConfig} className="bg-white text-black font-black uppercase tracking-tight py-4 flex items-center justify-center gap-2">
-              <Save size={18} />
-              Salvar Alterações Globais
+            <PremiumButton 
+              onClick={handleUpdateConfig} 
+              disabled={loading}
+              className="bg-white text-black font-black uppercase tracking-tight py-4 flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full" />
+              ) : (
+                <Save size={18} />
+              )}
+              {loading ? 'Salvando...' : 'Salvar Alterações Globais'}
             </PremiumButton>
           </div>
         </motion.div>
@@ -403,43 +635,50 @@ export default function AdminDashboard() {
 
       {activeTab === 'missions' && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-          <div className="glass-card p-8 rounded-[2.5rem] border border-white/5">
-            <h3 className="text-sm font-black uppercase tracking-widest mb-8 flex items-center gap-3">
-              <div className="p-2 bg-blue-500/20 rounded-xl"><Plus size={18} className="text-blue-400" /></div>
-              Criar Nova Missão
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div>
-                <label className="text-white/40 text-[10px] uppercase font-black tracking-widest mb-3 block mx-1">Título da Missão</label>
-                <input 
-                  type="text"
-                  value={newMission.title}
-                  onChange={(e) => setNewMission({...newMission, title: e.target.value})}
-                  placeholder="Ex: 50 Flexões Diárias"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-white/40 text-[10px] uppercase font-black tracking-widest mb-3 block mx-1">Recompensa (XP)</label>
-                <input 
-                  type="number"
-                  value={newMission.xpReward}
-                  onChange={(e) => setNewMission({...newMission, xpReward: parseInt(e.target.value)})}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="text-white/40 text-[10px] uppercase font-black tracking-widest mb-3 block mx-1">Descrição</label>
-                <textarea 
-                  value={newMission.description}
-                  rows={2}
-                  onChange={(e) => setNewMission({...newMission, description: e.target.value})}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm resize-none"
-                />
-              </div>
-              <div>
-                <label className="text-white/40 text-[10px] uppercase font-black tracking-widest mb-3 block mx-1">Requisito de Plano</label>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          handleAddMission();
+        }} className="glass-card p-8 rounded-[2.5rem] border border-white/5">
+          <h3 className="text-sm font-black uppercase tracking-widest mb-8 flex items-center gap-3">
+            <div className="p-2 bg-blue-500/20 rounded-xl"><Plus size={18} className="text-blue-400" /></div>
+            Criar Nova Missão
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div>
+              <label className="text-white/40 text-[10px] uppercase font-black tracking-widest mb-3 block mx-1">Título da Missão</label>
+              <input 
+                type="text"
+                required
+                value={newMission.title}
+                onChange={(e) => setNewMission({...newMission, title: e.target.value})}
+                placeholder="Ex: 50 Flexões Diárias"
+                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm focus:border-blue-500/50 transition-all"
+              />
+            </div>
+            <div>
+              <label className="text-white/40 text-[10px] uppercase font-black tracking-widest mb-3 block mx-1">Recompensa (XP)</label>
+              <input 
+                type="number"
+                required
+                value={newMission.xpReward}
+                onChange={(e) => setNewMission({...newMission, xpReward: parseInt(e.target.value)})}
+                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm focus:border-blue-500/50 transition-all"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-white/40 text-[10px] uppercase font-black tracking-widest mb-3 block mx-1">Descrição</label>
+              <textarea 
+                required
+                value={newMission.description}
+                rows={2}
+                onChange={(e) => setNewMission({...newMission, description: e.target.value})}
+                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm resize-none focus:border-blue-500/50 transition-all"
+              />
+            </div>
+            <div>
+              <label className="text-white/40 text-[10px] uppercase font-black tracking-widest mb-3 block mx-1">Requisito de Plano</label>
+              <div className="relative">
                 <select 
                   value={newMission.planRequired}
                   onChange={(e) => setNewMission({...newMission, planRequired: e.target.value})}
@@ -450,14 +689,16 @@ export default function AdminDashboard() {
                   <option value="gold">GOLD</option>
                   <option value="diamante">DIAMANTE</option>
                 </select>
+                <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 text-white/20 pointer-events-none" size={14} />
               </div>
             </div>
-            
-            <PremiumButton onClick={handleAddMission} className="bg-blue-600 text-white font-black uppercase tracking-tight py-4 flex items-center justify-center gap-2">
-              <Rocket size={18} />
-              Publicar Missão
-            </PremiumButton>
           </div>
+          
+          <PremiumButton type="submit" className="bg-blue-600 text-white font-black uppercase tracking-tight py-4 flex items-center justify-center gap-2 hover:bg-blue-500">
+            <Rocket size={18} />
+            Publicar Missão
+          </PremiumButton>
+        </form>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {missions.map((mission) => (

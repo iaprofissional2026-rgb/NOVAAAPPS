@@ -13,6 +13,8 @@ interface AppConfig {
 interface AppContextType {
   config: AppConfig | null;
   loading: boolean;
+  isMusicEnabled: boolean;
+  toggleMusic: () => void;
 }
 
 const AppContext = createContext<AppContextType>({} as AppContextType);
@@ -27,8 +29,13 @@ const DEFAULT_CONFIG: AppConfig = {
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMusicEnabled, setIsMusicEnabled] = useState(true);
 
   useEffect(() => {
+    // Try to restore user preference
+    const saved = localStorage.getItem('music_enabled');
+    if (saved !== null) setIsMusicEnabled(saved === 'true');
+    
     const configRef = doc(db, 'config', 'global');
     const unsubscribe = onSnapshot(configRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -53,36 +60,62 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [config]);
 
+  const toggleMusic = () => {
+    const newState = !isMusicEnabled;
+    setIsMusicEnabled(newState);
+    localStorage.setItem('music_enabled', String(newState));
+  };
+
   return (
-    <AppContext.Provider value={{ config, loading }}>
+    <AppContext.Provider value={{ config, loading, isMusicEnabled, toggleMusic }}>
       {children}
-      <BackgroundMusic url={config?.musicUrl} />
+      <BackgroundMusic url={config?.musicUrl} enabled={isMusicEnabled} />
     </AppContext.Provider>
   );
 }
 
-function BackgroundMusic({ url }: { url?: string }) {
-  const [playing, setPlaying] = useState(false);
+function BackgroundMusic({ url, enabled }: { url?: string; enabled: boolean }) {
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    if (!url) return;
-    const audio = new Audio(url);
-    audio.loop = true;
-    audio.volume = 0.2;
+    if (!url) {
+      if (audio) {
+        audio.pause();
+        setAudio(null);
+      }
+      return;
+    }
 
-    const playAudio = () => {
-      audio.play().catch(e => console.log("Auto-play blocked", e));
-      setPlaying(true);
-      window.removeEventListener('click', playAudio);
-    };
-
-    window.addEventListener('click', playAudio);
+    const newAudio = new Audio(url);
+    newAudio.loop = true;
+    newAudio.volume = 0.2;
+    setAudio(newAudio);
 
     return () => {
-      audio.pause();
-      window.removeEventListener('click', playAudio);
+      newAudio.pause();
+      newAudio.src = "";
     };
   }, [url]);
+
+  useEffect(() => {
+    if (!audio) return;
+
+    if (enabled) {
+      const play = () => {
+        audio.play().catch(e => console.log("Auto-play blocked", e));
+        window.removeEventListener('click', play);
+        window.removeEventListener('touchstart', play);
+      };
+      
+      // Attempt play immediately, if fails wait for interaction
+      audio.play().catch(() => {
+        window.addEventListener('click', play);
+        window.addEventListener('touchstart', play);
+      });
+    } else {
+      audio.pause();
+    }
+  }, [audio, enabled]);
 
   return null;
 }

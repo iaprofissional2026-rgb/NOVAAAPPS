@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { ScreenWrapper } from '@/components/ScreenWrapper';
 import { PremiumButton } from '@/components/ui/PremiumButton';
-import { Mail, KeyRound, User } from 'lucide-react';
+import { Mail, KeyRound, User, ChevronLeft } from 'lucide-react';
 import React, { useState } from 'react';
 import { EvoMindLogo } from '@/components/EvoMindLogo';
 import { useAuth } from '@/components/AuthProvider';
@@ -13,16 +13,18 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     try {
       await login(username, password);
       router.push('/dashboard');
     } catch (err: any) {
-      alert(err.message || 'Erro ao entrar.');
+      setError(err.message || 'Erro ao entrar.');
     } finally {
       setLoading(false);
     }
@@ -30,6 +32,14 @@ export default function Login() {
 
   return (
     <ScreenWrapper className="h-[100dvh] bg-transparent px-6 py-12 justify-center relative">
+      {/* Back Button */}
+      <button 
+        onClick={() => router.push('/welcome')}
+        className="absolute top-12 left-6 z-20 w-10 h-10 glass-card rounded-full flex items-center justify-center text-white/50 hover:text-white transition-colors"
+      >
+        <ChevronLeft size={20} />
+      </button>
+
       <div className="absolute top-[-10%] left-[-20%] w-[120%] h-[50%] bg-gradient-to-br from-blue-900/30 to-purple-900/10 rounded-b-[100%] blur-3xl opacity-50 pointer-events-none" />
       
       <div className="z-10 flex flex-col w-full max-w-sm mx-auto">
@@ -68,6 +78,17 @@ export default function Login() {
               />
             </div>
           </div>
+          
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest p-3 rounded-xl text-center"
+            >
+              {error}
+            </motion.div>
+          )}
+
           <div className="pt-2">
             <PremiumButton type="submit" disabled={loading}>
               {loading ? 'Entrando...' : 'Acessar Conta'}
@@ -76,8 +97,8 @@ export default function Login() {
         </form>
 
         <div className="space-y-3">
-          <PremiumButton variant="ghost" onClick={() => router.push('/quiz')}>
-            Criar nova conta
+          <PremiumButton variant="ghost" onClick={() => router.push('/onboarding')}>
+            Novo por aqui? Começar Quiz
           </PremiumButton>
         </div>
       </div>

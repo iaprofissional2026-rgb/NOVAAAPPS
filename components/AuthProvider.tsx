@@ -99,6 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let msg = "Erro ao entrar. Verifique usuário e senha.";
       if (error.code === 'auth/user-not-found') msg = "Usuário não encontrado.";
       if (error.code === 'auth/wrong-password') msg = "Senha incorreta.";
+      if (error.code === 'auth/invalid-credential') msg = "Usuário ou senha incorretos.";
       throw new Error(msg);
     } finally {
       setLoading(false);

@@ -8,8 +8,13 @@ service cloud.firestore {
 
     // Core Helpers
     function isSignedIn() { return request.auth != null; }
-    function isEmailAdmin() { return isSignedIn() && request.auth.token.email == 'novaaapsadmin@app.evomind'; }
-    function isAdmin() { return isEmailAdmin() || (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))); }
+    function isAdmin() { 
+      return isSignedIn() && (
+        request.auth.token.email == 'souturbo149@gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username in ['novaaapsadmin', 'novaappsadmin2', 'souturbo149', 'NOVAAAPSADMIN', 'NOVAAPPSADMIN2', 'SOUTURBO149'])
+      );
+    }
     function isValidId(id) { return id is string && id.size() > 0 && id.size() <= 128; }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
